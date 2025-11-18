@@ -1,0 +1,455 @@
+Guideline for Kernel Assignment 3
+=================================
+
+Total points: 100
+
++---------------------+
+| General Guidelines: |
++---------------------+
+
+1)  The points below are maximum points.  Partial credits may be given, if
+    appropriate.
+
+2)  Grade what's in the "plus points" section first, then grade the "minus
+    points" to deduct points.
+
+3)  Please read the student's README first to see if you need to do something
+    different to get their code to work and what the known problems are.  The
+    grader must not modify ANY source code and the grader can only grade on a
+    32-bit standard Ubuntu 16.04 system.
+
+4)  The scripts below are for csh/tcsh.  If you use bash, please modify them
+    where necessary.  Or, you can do "tcsh" and then run the scripts.
+
+5)  The grading is meant to be harsh!  In the "plus points" section, if running
+    the "diff" command is suppose to produce no output, but the student's code
+    produces some output, most likely, no corresponding plus points will be earned.
+    Again, we cannot grade base of "effort".  Similarly, if running the "diff"
+    command suppose to produce some output, but the student's code produces no
+    output or in the wrong format, most likely, no corresponding plus points will
+    be earned.
+
+6)  Unless otherwise specified, the minimum deduction for a mistake of any kind
+    is 0.5 pt (unless you have lost all the points allocated for a particular
+    test/subtest) even if all are caused by the same programming bug.  If a range
+    is specified (e.g., -5 to -10 pts), it means that if such an error occured,
+    even just once, the minimum will be deducted.  From that point on, each
+    additional occurrence will incur a 0.5 pt deduction.
+
+7)  The posted grading guidelines is not perfect.  We will try our best to stick
+    to the grading guidelines.  Sometimes, after we started grading some of the
+    submissions, we realize that we missed something (most often in "minus
+    points").  The bottomline is that we reserve the right to add or change
+    things in the grading guidelines as we see fit (or take additiona deductions
+    if you don't follow the spec).  By default, if the spec says that you are
+    required to implement something, even though it's not explicitly mentioned in
+    the grading guidelines, you must follow the spec.  Please don't assume that
+    it's fine not to follow the spec.  If you are not sure about something, it's
+    best to send an e-mail to the instructor for clarification.
+
+8)  The grader will grade using a different set of "data" (we will try our best
+    not to change the script).  Any numerical value or filename in a commandline
+    arguments is also considered "data".  The contents of all test data files
+    will also be changed.  Some filenames can also change.  So, you need to make
+    sure that your code can handle any input (good and bad).
+
++--------------+
+| Plus points: |
++--------------+
+
+Make sure GDBWAIT=0, DRIVERS=1, VFS=1, S5FS=1, VM=1, and DYNAMIC=0 in Config.mk.
+Must start weenix using "./weenix -n".  If you are running user space shell, the
+only way to exit weenix is to run "/sbin/halt" from the user space shell prompt.
+
+(A) KASSERT : +40 points
+        Invoke /sbin/init from initproc_run(), type /sbin/halt at prompt.
+        Use DBG=error,print,test in Config.mk for grading.
+
+        Students need to have the following KASSERT statements in their code and
+            at the right places and they need to function correctly (i.e., must
+            place "conforming dbg() calls" immediately after the KASSERT statements
+            to demonstrate that these KASSERT statements are successfully executed
+            in order to get any credit).
+
+        Please note that if one runs /sbin/init from initproc_run() and type
+            /sbin/halt at user-space shell prompt, all the functions below should
+            be invoked and all the KASSERT statements should be reached.  If
+            /sbin/init cannot work and kshell is used instead to run individual
+            subtests and if a particular KASSERT statement cannot be reached
+            simply by starting and stopping weenix, students must use TWO
+            consecutive "conforming dbg() calls" immediately after the
+            corresponding KASSERT statements in these functions where the first
+            one refers to (A) and the 2nd one refers to a subtest in section (B)
+            or (D).
+
+        For a "conforming dbg() call" immediately after a requred KASSERT, you
+            must use the correct format, i.e., dbg(DBG_PRINT, "(GRADING3A X.Y)\n")
+            where X is a number between 1 and 8, and Y is a corresponding subtest
+            letter.  If an incorrect format is used (but have the same information
+            content), the most you can get for each such item is 50% of the
+            allocated points.  If such a "conforming dbg() call" is missing, you
+            will not get any credit.
+
+    (1) In mm/pframe.c:
+
+        (a) In pframe_get():
+            (1 pt) (postcondition when returning 0) KASSERT(NULL != *result); /* on successful return, must return a valid pframe object */
+            (1 pt) (postcondition when returning 0) KASSERT(!pframe_is_busy(*result)); /*  the returned pframe object must not be in the "busy" state */
+
+        (b) In pframe_pin():
+            (0.5 pt) (precondition) KASSERT(!pframe_is_free(pf)); /* can only pin a pframe object that's "in-use" */
+            (0.5 pt) (precondition) KASSERT(pf->pf_pincount >= 0); /* the pin-count of a pframe object cannot be negative */
+
+        (c) In pframe_unpin():
+            (0.5 pt) (precondition) KASSERT(!pframe_is_free(pf)); /* can only pin a pframe object that's "in-use" */
+            (0.5 pt) (precondition) KASSERT(pf->pf_pincount > 0); /* the pin-count of a pframe object must be positive */
+
+    (2) In vm/mmap.c:
+
+        (a) In do_mmap():
+            (2 pts) (postcondition) KASSERT(NULL != curproc->p_pagedir); /* page table must be valid after a memory segment is mapped into the address space */
+
+    (3) In vm/vmmap.c:
+
+        (a) In vmmap_destroy():
+            (2 pts) (precondition) KASSERT(NULL != map); /* function argument must not be NULL */
+
+        (b) In vmmap_insert():
+            (1 pt) (precondition) KASSERT(NULL != map && NULL != newvma); /* both function arguments must not be NULL */
+            (1 pt) (precondition) KASSERT(NULL == newvma->vma_vmmap); /* newvma must be newly create and must not be part of any existing vmmap */
+            (1 pt) (precondition) KASSERT(newvma->vma_start < newvma->vma_end); /* newvma must not be empty */
+            (1 pt) (precondition) KASSERT(ADDR_TO_PN(USER_MEM_LOW) <= newvma->vma_start && ADDR_TO_PN(USER_MEM_HIGH) >= newvma->vma_end);
+                                  /* addresses in this memory segment must lie completely within the user space */
+
+        (c) In vmmap_lookup():
+            (2 pt) (precondition) KASSERT(NULL != map); /* the first function argument must not be NULL */
+
+        (d) In vmmap_map(): /* function arguments (except first and last) describe the new memory segment to be created and added to the address space */
+            (0.5 pt) (precondition) KASSERT(NULL != map); /* must not add a memory segment into a non-existing vmmap */
+            (0.5 pt) (precondition) KASSERT(0 < npages); /* number of pages of this memory segment cannot be 0 */
+            (0.5 pt) (precondition) KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags)); /* must specify whether the memory segment is shared or private */
+            (0.5 pt) (precondition) KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage)); /* if lopage is not zero, it must be a user space vpn */
+            (0.5 pt) (precondition) KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)))
+                                    /* if lopage is not zero, the specified page range must lie completely within the user space */
+            (0.5 pt) (precondition) KASSERT(PAGE_ALIGNED(off)); /* the off argument must be page aligned */
+
+        (e) In vmmap_is_range_empty(): endvfn = startvfn+npages
+            (2 pt) (precondition) KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
+                                  /* the specified page range must not be empty and lie completely within the user space */
+
+    (4) In vm/anon.c:
+
+        (a) In anon_init():
+            (1 pt) (postcondition) KASSERT(anon_allocator); /* after initialization, anon_allocator must not be NULL */
+
+        (b) In anon_ref():
+            (1 pt) (precondition) KASSERT(o && (0 < o->mmo_refcount) && (&anon_mmobj_ops == o->mmo_ops));
+                                  /* the o function argument must be non-NULL, has a positive refcount, and is an anonymous object */
+
+        (c) In anon_put():
+            (1 pt) (precondition) KASSERT(o && (0 < o->mmo_refcount) && (&anon_mmobj_ops == o->mmo_ops));
+                                  /* the o function argument must be non-NULL, has a positive refcount, and is an anonymous object */
+
+        (d) In anon_fillpage():
+            (0.5 pt) (precondition) KASSERT(pframe_is_busy(pf)); /* can only "fill" a page frame when the page frame is in the "busy" state */
+            (0.5 pt) (precondition) KASSERT(!pframe_is_pinned(pf)); /* must not fill a page frame that's already pinned */
+
+    (5) In vm/pagefault.c:
+
+        (a) In handle_pagefault(): (let pf be the page frame located by the page fault handler)
+            (1 pt) (middle) KASSERT(pf); /* this page frame must be non-NULL */
+            (1 pt) (middle) KASSERT(pf->pf_addr); /* this page frame's pf_addr must be non-NULL */
+
+    (6) In vm/shadow.c:
+
+        (a) In shadow_init():
+            (1 pt) (postcondition) KASSERT(shadow_allocator); /* after initialization, shadow_allocator must not be NULL */
+
+        (b) In shadow_ref():
+            (1 pt) (precondition) KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+                                  /* the o function argument must be non-NULL, has a positive refcount, and is a shadow object */
+
+        (c) In shadow_put():
+            (1 pt) (precondition) KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+                                  /* the o function argument must be non-NULL, has a positive refcount, and is a shadow object */
+
+        (d) In shadow_lookuppage():
+            (1 pt) (postcondition when returning 0) KASSERT(NULL != (*pf)); /* on return, (*pf) must be non-NULL */
+            (1 pt) (postcondition when returning 0) KASSERT((pagenum == (*pf)->pf_pagenum) && (!pframe_is_busy(*pf)));
+                                                    /* on return, the page frame must have the right pagenum and it must not be in the "busy" state */
+
+        (e) In shadow_fillpage():
+            (1 pt) (precondition) KASSERT(pframe_is_busy(pf)); /* can only "fill" a page frame when the page frame is in the "busy" state */
+            (1 pt) (precondition) KASSERT(!pframe_is_pinned(pf)); /* must not fill a page frame that's already pinned */
+
+    (7) In proc/fork.c:
+
+        (a) In do_fork(): (let newproc be a pointer to the new child process and let newthr be the thread in newproc)
+            (1 pt) (precondition) KASSERT(regs != NULL); /* the function argument must be non-NULL */
+            (1 pt) (precondition) KASSERT(curproc != NULL); /* the parent process, which is curproc, must be non-NULL */
+            (1 pt) (precondition) KASSERT(curproc->p_state == PROC_RUNNING); /* the parent process must be in the running state and not in the zombie state */
+            (1 pt) (middle) KASSERT(newproc->p_state == PROC_RUNNING); /* new child process starts in the running state */
+            (1 pt) (middle) KASSERT(newproc->p_pagedir != NULL); /* new child process must have a valid page table */
+            (1 pt) (middle) KASSERT(newthr->kt_kstack != NULL); /* thread in the new child process must have a valid kernel stack */
+
+    (8) In proc/kthread.c:
+
+        (a) In kthread_clone(): (let newthr be the new thread)
+            (1 pt) (precondition) KASSERT(KT_RUN == thr->kt_state); /* the thread you are cloning must be in the running or runnable state */
+            (1 pt) (postcondition) KASSERT(KT_RUN == newthr->kt_state); /* new thread starts in the runnable state */
+
+(B) Additional tests (with or without user-space shell) : +15 points
+        Use DBG=error,test in Config.mk for grading.
+
+        Best to invoke these from user-space shell.
+        Must not restart weenix between tests.
+        Not suppose to crash or freeze weenix; otherwise, deduct 0.5 pt in
+            the appropriate minus point item each time crash or freeze happens
+        In case you cannot get user-space shell to work, you can call
+            kernel_execve() from a kshell to run these tests.
+        Please run each command twice in a row.  If each of
+            these tests cannot run without restarting weenix, deduct 50%.
+    (1) (3 pts) /usr/bin/hello
+    (2) (2 pts) /usr/bin/args ab cde fghi j
+    (3) (2 pts) /bin/uname -a
+    (4) (1 pt) /bin/stat /README
+    (5) (1 pt) /bin/stat /usr
+    (6) (1 pt) /bin/ls /usr/bin
+    (7) (5 pts) /usr/bin/fork-and-wait
+
+(C) User-space shell (must run from user-space shell) : +5 points
+        Use DBG=error,test in Config.mk for grading.
+
+        Type these commands at a user-space shell prompt.
+        Must not restart weenix between tests.
+        Not suppose to crash or freeze weenix; otherwise, deduct 0.5 pt in
+            the appropriate minus point item each time crash or freeze happens
+        Please run each command twice in a row.  If each of
+            these tests cannot run twice without restarting weenix, deduct 50%.
+    (1) (1 pt) help
+    (2) (1 pt) echo hello
+    (3) (1 pt) cat /README
+    (4) (1 pt) /bin/ls
+    (5) (1 pt) segfault
+                    should get "sh: child process accessed invalid memory"
+
+        Restart weenix before running tests below.
+
+(D) Additional tests (should run from user-space shell) : +30 points
+        Use DBG=error,test in Config.mk for grading.
+
+        If these tests cannot run from user shell, deduct 50% (i.e.,
+            you can get at most 15 points).
+
+    (1) (6 pts) /usr/bin/vfstest
+                    should pass all 671 tests with 0 failure
+                        deduct 0.5 pt for each test not passed
+                    when the prompt is returned, run it again
+                    if failed only in 2nd run, deduct 50%
+                    when the prompt is returned, type
+                        /sbin/halt
+                    gets full credit if weenix is halted cleanly
+                    if weenix cannot halted cleanly, deduct 50%
+                    then restart weenix to proceed to the next test
+    (2) (6 pts) /usr/bin/memtest
+                    should pass all 331 tests with 0 failure
+                        deduct 0.5 pt for each test not passed
+                    when the prompt is returned, run it again
+                    if failed only in 2nd run, deduct 50%
+                    when the prompt is returned, type
+                        /sbin/halt
+                    gets full credit if weenix is halted cleanly
+                    if weenix cannot halted cleanly, deduct 50%
+                    then restart weenix to proceed to the next test
+    (3) (6 pts) /usr/bin/eatmem
+                    no partial credit (basically either all or nothing)
+                    should eat around 10000 pages then all "given back"
+                    when the prompt is returned, run it again
+                    if failed only in 2nd run, deduct 50%
+                    when the prompt is returned, type
+                        /sbin/halt
+                    gets full credit if weenix is halted cleanly
+                    if weenix cannot halted cleanly, deduct 50%
+                    then restart weenix to proceed to the next test
+    (4) (6 pts) /usr/bin/forkbomb
+                    use DBG=error,test in Config.mk for grading this part (3 pts)
+                        no partial credit (i.e., all or nothing)
+                        type the following command:
+                            forkbomb limit250
+                        this test puts itself in the background to continue to fork child processes (no credit if this is not the case)
+                        after at least 10 child processes have been created, type the following commands one after another
+                                (no need to verify printout and it's okay if forkbomb has finished forking 250 child processes):
+                            vfstest
+                            memtest
+                            /sbin/halt
+                        gets full credit if weenix is halted cleanly (otherwise, no credit)
+                    use DBG=error,print,test in Config.mk for grading this part (3 pts)
+                        no partial credit (i.e., all or nothing)
+                        type the following command:
+                            forkbomb
+                        this test puts itself in the background to continue to fork child processes (no credit if this is not the case)
+                        after at least 10 child processes have been created, type the following command:
+                            /sbin/halt
+                        gets full credit if weenix is halted cleanly soon (otherwise, no credit)
+    (5) (6 pts) /usr/bin/stress
+                    use DBG=error,test in Config.mk for grading this part (3 pts)
+                        no partial credit (i.e., all or nothing)
+                        type the following command:
+                            stress limit250
+                        right before getting the prompt back, the last two messages must be "(note that this is running in the background)"
+                                and "Will fork 250 times..." (no credit if this is not the case)
+                        this test puts itself in the background to continue to fork child processes
+                        after getting the prompt back, type the following commands one after another
+                                (no need to verify printout and it's okay if the 250 limit has reached):
+                            vfstest
+                            memtest
+                            /sbin/halt
+                        gets full credit if weenix is halted cleanly (otherwise, no credit)
+                    use DBG=error,print,test in Config.mk for grading this part (3 pts)
+                        no partial credit (i.e., all or nothing)
+                        type the following command and notice the time (say X):
+                            stress
+                        right before getting the prompt back, the last message must be "(note that this is running in the background)"
+                                (no credit if this is not the case)
+                        this test puts itself in the background to continue to fork child processes
+                        wait till time is X+10sec, type the following command:
+                            /sbin/halt
+                        gets full credit if weenix is halted cleanly soon (otherwise, no credit)
+
+(E) Extra credit (must run from user-space shell) : +5 points
+        Use DBG=error,test in Config.mk for grading all tests below.
+
+        Please note that the grader will not run these tests by default.
+        To indicate to the grader that this part needs to be graded, simply give
+            yourself a non-zero grade in your vm-README.txt file.  The grader will grade
+            a subtest with DYNAMIC=1 in "Config.mk" for any subtest with a non-zero grade.
+        Update "Config.mk" to have DYNAMIC=1, recompile and restart weenix.
+    (1) (1 pt) /usr/bin/vfstest
+                    no partial credit (basically either all or nothing)
+                    should pass all 671 tests with 0 failure, do this twice without restarting
+                    must proceed to next test without restarting
+    (2) (1 pt) /usr/bin/memtest
+                    no partial credit (basically either all or nothing)
+                    should pass all 331 tests with 0 failure, do this twice without restarting
+                    must proceed to next test without restarting
+    (3) (1 pt) /usr/bin/eatmem
+                    no partial credit (basically either all or nothing)
+                    should eat around 10000 pages then all "given back", do this twice without restarting
+                    must proceed to next test without restarting
+    (4) (1 pt) /usr/bin/forkbomb limit250
+                    no partial credit (basically either all or nothing)
+                    this test puts itself in the background to fork 250 times
+                    run the following programs one after another (no need to verify printout):
+                        vfstest
+                        memtest
+                        eatmem
+                        /sbin/halt
+                    gets full credit if weenix is halted cleanly (otherwise, no credit)
+    (5) (1 pt) /usr/bin/stress limit250
+                    no partial credit (basically either all or nothing)
+                    right before getting the prompt back, the last two messages must be "(note that this is running in the background)"
+                            and "Will fork 250 times..." (no credit if this is not the case)
+                    this test puts itself in the background to continue to fork 250 times
+                    run the following programs one after another:
+                        vfstest
+                        memtest
+                        eatmem
+                        /sbin/halt
+                    gets full credit if weenix is halted cleanly (otherwise, no credit)
+
+(F) SELF-checks : +10 points
+        Use DBG=error,print,test in Config.mk for grading.
+
+        Every code sequence you wrote to replace a NOT_YET_IMPLEMENTED() call
+        must be reachable by starting and stopping the kernel or using a test
+        case.  It can either be tested when you run any of the above tests or 
+        you can use additional tests to demonstrate it (and document it in 
+        section (F) of the submitted README file regarding what test to run).  
+        In either case, you must use a correctly labeled dbg() call to 
+        demonstrate that every code sequence can be exercised.
+
+        For every unreachable code sequence or a code sequence that does not have
+        a "conforming dbg() call" at the END of the code sequence, take 1 point
+        off. Take 0.5 point off if it is not clear what test to run to get to
+        that code sequence.  Please note that such "conforming dbg() call" is
+        required at the END of every code sequence as specified in the spec.
+        You will not get credit for putting such information in a code comment
+        or not at the END of a code sequence (although if you put it close
+        enough to the END of the code sequence, we will deduct 0.5 pt).
+
+        You must use a correctly formatted "conforming dbg() calls".  Take 1 point off
+        for each incorrectly formatted or mis-labeled "conforming dbg() calls".
+        You must use a correctly formatted "conforming dbg() calls".  These are the
+        choices:
+                use dbg(DBG_PRINT, "(GRADING3A)\n") to mean simply starting and stopping the kernel, if applicable
+                use dbg(DBG_PRINT, "(GRADING3B X)\n") where X is a number between 1 and 7, if applicable
+                use dbg(DBG_PRINT, "(GRADING3C X)\n") where X is a number between 1 and 5, if applicable
+                use dbg(DBG_PRINT, "(GRADING3D X)\n") where X is a number between 1 and 5, if applicable
+                use dbg(DBG_PRINT, "(GRADING3E X)\n") where X is a number between 1 and 5, if applicable
+                use dbg(DBG_PRINT, "(GRADING3F X)\n") where X is an extra test you have written for the purpose of SELF-checks, if applicable
+            NOTE: "if applicable" means that if you have a separate command to run part of the subtests, you need to include subtest or subtest.item information
+            NOTE: must not use dbg_print()
+            NOTE: must use notation to include a subtest number if a separate command must be used to run a subtest
+            NOTE: -1 pt for each instance of including extra information in a conforming dbg() call
+            NOTE: -0.5 pt for not using "\n" in a conforming dbg() call
+
++---------------+
+| Minus points: |
++---------------+
+
+If a range is specified, it means that even if it only happens once, the grader must apply the minimum deduction.
+
+Missing/incomplete required section(s) in README file (vm-README.txt): -3 points (even if lots of comments in code)
+                      deduct 0.5 point each for every missing/incomplete item in README
+
+Submission in wrong file format : -2 points
+
+Submitted binary file : -2 points
+
+Submitted extra file : -2 points
+
+Wrong file location in submission : -2 points if files are not in correct directory
+                      if the submission does not preserve the directory structure,
+                          take 2 points off
+
+Altered or removed top comment block in a .c file : -20 points for each such file
+
+Altered or removed SIGNATURE : -20 points
+
+Extra printout when running with DBG=error,test or DBG=error,print,test in Config.mk: -5 points
+                      if you have debugging printout for yourself, you must use DBG_TEMP so it can be turned off in Config.mk
+
+Cannot compile      : -5 to -10, depending on effort to make it work
+                      if cannot generate executable, at least 5 points
+                          will be taken off, up to 10 points off if it
+                          takes a lot to make it work
+                      this assumes that there is a way to compile your
+                          program, if not, you probably wouldn't have
+                          earned any "plus points" anyway
+
+Compiler warnings   : -1 to -3 points
+                      take 1 point off for 1-4 warnings, 2 points off
+                          for 5-8 warnings, 3 points for more
+                      if you disabled compiler warnings, we will take
+                          20 points off
+
+"make clean"        : -2 points if cannot delete all binary files created during compilation
+                      (.o files, .gch files, executable files, etc.)
+
+Race condition in sched_switch() : -5 points if race condition is not fixed in
+                          sched_switch() and pressing a key would unfreeze
+                      deduct 1 point each time this happens
+
+Kernel panic when running tests : -5 to -10 points
+                      if kernel panic just once, deduct 5 points,
+                          for each additional occurrance, deduct 1 pt
+
+Kernel freezes when running tests : -5 to -10 points
+                      if kernel freezes just once, deduct 5 points,
+                          for each additional occurrance, deduct 1 pt
+
+Cannot halt kernel cleanly when shutting down (not due to panic or freeze) : -5 to -10 points
+                      if failed to see the "weenix: halted cleanly" message
+                          just once, deduct 5 points, for each additional
+                          occurrance, deduct 1 pt
+
